@@ -10,3 +10,5 @@ node_modules/
 dist/vendor/
 supabase/.temp/
 supabase/.branches/
+
+.vercel/

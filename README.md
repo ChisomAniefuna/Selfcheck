@@ -108,3 +108,18 @@ node scripts/verify-supabase.mjs --live
 ```
 
 This opt-in command creates two disposable guest accounts in the configured project, checks persistence/isolation/function authentication, and deletes the accounts in a `finally` block. It uses only fictional text and does not upload photos or consume YouCam scan credits. If cleanup fails it reports the failure and exits unsuccessfully.
+
+## Vercel frontend deployment
+
+`vercel.json` selects a static frontend with `npm ci`, `npm run build`, output directory `dist`, and Node.js 22. Supabase remains the backend. Only the public Supabase URL/publishable key are shipped; YouCam and Supabase server secrets stay in the Edge Function.
+
+Deploy from this repository root using the Vercel CLI:
+
+```sh
+npx vercel login
+npx vercel deploy --prod
+```
+
+Or import `ChisomAniefuna/Selfcheck` in Vercel with framework **Other**, root directory **.**, build command **npm run build**, and output directory **dist**. The repository contains configuration for those build settings.
+
+After Vercel assigns the production origin, add that exact origin to the Supabase Edge Function's allowed origins before considering the deployment complete. Do not permit every `vercel.app` domain. Preview domains are not automatically trusted. Verify cloud saving and Edge Function requests from the production origin. Deployment does not configure the missing YouCam API key.
