@@ -87,7 +87,7 @@ Saved cloud summaries remain until explicitly deleted. Guest accounts are not au
 
 ## Verification limits / remaining setup
 
-The code, browser bundle and local PostgreSQL policy tests can run without a cloud account. Project `xtellserfsxjjonepfkh` is configured in `dist/config.js`. Both database migrations and the authenticated `shelfcheck` Edge Function are deployed. The cleanup Cron job is active. Guest sign-in must be enabled in the project dashboard before cloud saving can work. Remote Auth, Edge Function/CORS and two-guest isolation still need end-to-end validation. YouCam still requires an actual key and a consented sandbox image; no live scan has been claimed. Check exact account response shapes and unit costs before using credits. Physical iOS/Android and cross-browser audio/upload QA remain outstanding.
+The code, browser bundle and local PostgreSQL policy tests can run without a cloud account. Project `xtellserfsxjjonepfkh` is configured in `dist/config.js`. Both database migrations and the authenticated `shelfcheck` Edge Function are deployed. The cleanup Cron job is active. Anonymous Sign-Ins is enabled. Live verification passed for guest sign-in, saving/reloading/deleting summaries, isolation between two guests, authenticated Edge Function access with allowed-origin CORS, rejection of unauthenticated requests, and deletion of both disposable test guests. YouCam still requires an actual key and a consented sandbox image; no live scan has been claimed. Check exact account response shapes and unit costs before using credits. Physical iOS/Android and cross-browser audio/upload QA remain outstanding.
 
 Official references:
 - https://supabase.com/docs/guides/auth/auth-anonymous
@@ -100,3 +100,11 @@ Official references:
 - https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis
 
 The security advisor reports an informational “RLS enabled, no policy” entry for `scan_jobs`. This is intentional deny-by-default: browser roles have no table grants or policies; only the authenticated Edge Function uses its server credential to access task references.
+
+## Repeat the live backend smoke test
+
+```sh
+node scripts/verify-supabase.mjs --live
+```
+
+This opt-in command creates two disposable guest accounts in the configured project, checks persistence/isolation/function authentication, and deletes the accounts in a `finally` block. It uses only fictional text and does not upload photos or consume YouCam scan credits. If cleanup fails it reports the failure and exits unsuccessfully.
