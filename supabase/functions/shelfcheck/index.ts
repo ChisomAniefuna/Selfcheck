@@ -17,7 +17,7 @@ async function limitedBody(req:Request,max:number){
 }
 Deno.serve(async req=>{
  const origin=req.headers.get('Origin')||'';
- const allowed=(Deno.env.get('ALLOWED_ORIGINS')||'').split(',').map(x=>x.trim()).filter(Boolean);
+ const allowed=(Deno.env.get('ALLOWED_ORIGINS')||'http://localhost:4173,http://127.0.0.1:4173').split(',').map(x=>x.trim()).filter(Boolean);
  const cors:Record<string,string>={'Vary':'Origin','Access-Control-Allow-Headers':'authorization,x-client-info,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS','Cache-Control':'no-store'};
  if(origin&&allowed.includes(origin))cors['Access-Control-Allow-Origin']=origin;
  const reply=(status:number,data:unknown)=>Response.json(data,{status,headers:cors});

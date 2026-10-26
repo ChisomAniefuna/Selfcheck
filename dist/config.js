@@ -1,3 +1,3 @@
-// Public configuration only. Set with: npm run configure:supabase
+// Public Supabase configuration. Row-level security protects guest data.
 // Secret/service-role keys must never be placed in this file.
-export const supabaseConfig = { url: '', publishableKey: '' };
+export const supabaseConfig = {"url":"https://xtellserfsxjjonepfkh.supabase.co","publishableKey":"sb_publishable_VqSjCSVWaDjeVDTCdmXAAw_VatVLUgf"};

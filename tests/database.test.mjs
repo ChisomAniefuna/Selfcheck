@@ -4,7 +4,7 @@ test('PostgreSQL RLS isolates saved decisions and protects scan references',asyn
  const db=new PGlite();
  try{
   await db.exec(`create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated; insert into auth.users values ('${a}'),('${b}');`);
-  await db.exec(await readFile(new URL('../supabase/migrations/20261026000100_shelfcheck.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261026121448_shelfcheck.sql',import.meta.url),'utf8'));
   await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${a}',false);`);
   await db.query('insert into public.saved_decisions(user_id,product_name,decision,summary) values ($1,$2,$3,$4)',[a,'Quiet Cream','hold','Text only']);
   await assert.rejects(()=>db.query('insert into public.saved_decisions(user_id,product_name,decision,summary) values ($1,$2,$3,$4)',[b,'Foreign','hold','Text only']),/row-level security/);
