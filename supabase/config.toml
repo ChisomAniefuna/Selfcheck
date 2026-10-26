@@ -1,0 +1,7 @@
+project_id = "shelfcheck"
+
+[auth]
+enable_anonymous_sign_ins = true
+
+[functions.shelfcheck]
+verify_jwt = true

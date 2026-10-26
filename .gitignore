@@ -6,3 +6,7 @@ node_modules/
 .DS_Store
 # Site-specific hosting identity is managed separately from GitHub.
 .openai/
+
+dist/vendor/
+supabase/.temp/
+supabase/.branches/

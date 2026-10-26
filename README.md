@@ -1,71 +1,100 @@
 # ShelfCheck
 
-A mobile-first skincare purchase comparison prototype. 16 fictional sample catalogue items, editable routine, transparent rule-based verdicts, goal/budget/sensitivity preferences, consent-gated photo path, local text-only saved summaries, downloads, and session deletion.
+Skincare purchase comparisons with a responsive interface, 16 fictional sample products, transparent verdicts, optional read-aloud decisions and a Supabase backend.
 
-## Run
+Repository: https://github.com/ChisomAniefuna/Selfcheck
 
-Requires Node.js 22+. No dependency installation required.
+## Run locally
+
+Requires Node.js 22+.
 
 ```sh
+npm ci
 npm run dev
 ```
 
-Open http://localhost:4173. Run `npm test` for decision-engine acceptance checks.
+Open http://localhost:4173. `npm run build` bundles the official Supabase browser client locally. No browser CDN is required. `npm test` runs comparison, narration, backend and PostgreSQL row-level security tests.
 
-## Optional YouCam connection
+Without Supabase configuration the app clearly shows **Local preview**. Comparisons, narration, downloads and browser-local saves still work. Once configured, saved decisions use Supabase and connection failures are shown; they never silently fall back to local saves.
 
-Copy `.env.example` to `.env` and set your own `YOUCAM_API_KEY` locally. Run:
+## Backend architecture
 
-```sh
-node --env-file=.env server.mjs
-```
+- **Supabase Auth:** anonymous guest sessions; no email or password required.
+- **PostgreSQL:** text-only `saved_decisions`, with RLS limiting each guest to their own rows. Nothing is saved until the visitor selects Save.
+- **Supabase Edge Function `shelfcheck`:** authenticated YouCam upload, task creation/polling, availability and session deletion.
+- **PostgreSQL `scan_jobs`:** private task references with atomic per-user reservations, polling limits and expiry. Browser roles have no direct access.
+- **Supabase Cron:** removes expired task references every minute. Task access expires at 15 minutes; physical deletion normally follows within a minute. Monitor the job rather than assuming it ran.
+- **Static frontend:** routine selections/preferences and scan scores stay in tab memory. Inspectable purchase-comparison rules stay in `dist/catalog.js`.
+- `server.mjs` is now a static development server, not the production backend.
 
-Never commit `.env`. The key is used only by the Node server. The adapter follows the official File API and asynchronous Skin Analysis v2.0 task workflow, validates size/MIME/signature, uses consent, session ownership, a one-minute scan limit, 10-second polling, and transient 15-minute server memory. The browser checks availability before sending photos. No simulated scores are substituted.
+Original photos and provider results are not stored in Supabase Storage or database tables. Images go through the Edge Function to YouCam only after consent. Provider-side retention is separate.
 
-**Live integration is not verified:** no YouCam credentials or consenting test image were provided. Verify account capabilities, exact response nesting, supported scores, upload headers, and credit cost in the sandbox before a judged demo. The normalizer only accepts returned numeric `ui_score` fields; unsupported responses show an actionable failure. Provider URLs and raw images are not persisted or logged. Provider-side retention/deletion is separate. Additional production hardening and server-side image dimension decoding are needed before accepting public uploads.
+## Create and connect your Supabase project
+
+1. Create a project at https://supabase.com/dashboard. Keep the database password private.
+2. Enable **Anonymous Sign-Ins** in Authentication settings. For a public launch, configure Supabase's recommended CAPTCHA/abuse protections and wire its token into guest sign-in before exposing the app broadly.
+3. Install/use the Supabase CLI and authenticate:
+
+   ```sh
+   npx supabase login
+   npx supabase link --project-ref YOUR_PROJECT_REF
+   npx supabase db push
+   ```
+
+   This applies both migrations, including the Cron extension/job. If your project's extension permissions differ, enable Supabase Cron in the dashboard first, then rerun the pending migration. Inspect migration success and the Cron job history.
+4. In **Edge Functions → Secrets**, set:
+   - `YOUCAM_API_KEY`: your YouCam key; never expose it in browser config.
+   - `ALLOWED_ORIGINS`: exact comma-separated frontend origins, for example `http://localhost:4173,https://your-production-domain.example`. No wildcards or paths.
+   Supabase injects its own project URL and public/secret key dictionaries. The function uses the `default` entries, with legacy environment fallbacks.
+5. Deploy the function with JWT verification enabled:
+
+   ```sh
+   npx supabase functions deploy shelfcheck
+   ```
+
+   `supabase/config.toml` sets `verify_jwt = true`; the handler also verifies the user with Auth. Do not disable authentication to work around a 401.
+6. Copy `.env.example` to `.env` and set **public configuration only**:
+
+   ```dotenv
+   SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+   SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_PUBLIC_KEY
+   PORT=4173
+   ```
+
+   Then run:
+
+   ```sh
+   npm run configure:supabase
+   npm run dev
+   ```
+
+   The configuration helper refuses secret/service-role keys. `dist/config.js` contains only public values and may be deployed. `.env` is ignored. For a static host, run `npm ci && npm run build`, then publish `dist/`.
+
+Guest access is tied to this browser's Supabase session token. Clearing browser storage or switching devices loses access to that guest account. Cross-device access needs a future permanent sign-in/linking flow; responsive layouts alone do not provide account syncing. Existing browser-local summaries are not uploaded automatically.
+
+## Deletion and retention
+
+Delete session first deletes the authenticated guest account through the Edge Function. Foreign-key cascades remove its summaries and scan references. Only after remote success does the frontend clear its local state. A remote failure keeps local data and shows a retryable error.
+
+Saved cloud summaries remain until explicitly deleted. Guest accounts are not automatically cleaned up by Supabase. Clearing browser storage without using Delete session does not delete the remote account or summaries; schedule a separately reviewed retention policy before a public launch. YouCam deletion is not promised. Never log photo bytes, tokens, provider upload URLs or sensitive provider responses.
+
+## Product and device behavior
+
+- All catalogue products, ingredient data and USD prices are fictional/incomplete demonstrations.
+- Verdicts explain category/ingredient overlap, budget, unknowns and next steps. They do not establish personal safety, allergies, clinical diagnosis or product effectiveness.
+- Optional Read aloud speaks the same verdict, reasons and limitations with voice/speed selection and Pause/Resume/Stop. Available voices depend on device/browser; some may require internet. No microphone is used.
+- Responsive QA passed at 320, 375, 768, 1024 and 1440 CSS pixels for Overview, My shelf, Comparison, Skin insights and Saved decisions before the backend change. Reusable manual fixture: `tests/responsive-qa.html` (temporarily copy into `dist/` to run).
+
+## Verification limits / remaining setup
+
+The code, browser bundle and local PostgreSQL policy tests can run without a cloud account. A real Supabase project has **not yet been connected or deployed**. Supabase Auth, remote migrations/Cron, Edge Function integration, CORS and two-guest isolation still need validation against the real project. YouCam still requires an actual key and a consented sandbox image; no live scan has been claimed. Check exact account response shapes and unit costs before using credits. Physical iOS/Android and cross-browser audio/upload QA remain outstanding.
 
 Official references:
+- https://supabase.com/docs/guides/auth/auth-anonymous
+- https://supabase.com/docs/guides/getting-started/api-keys
+- https://supabase.com/docs/guides/functions/auth
+- https://supabase.com/docs/guides/functions/secrets
+- https://supabase.com/docs/guides/cron
 - https://docs.perfectcorp.com/reference/file
 - https://docs.perfectcorp.com/reference/ai_skin_analysis/v2.0
-- https://docs.perfectcorp.com/develop/quick_start_guide
-
-## Deployment
-
-The Sites deployment serves `dist/` as a private static app. All shelf, comparison, summary and deletion interactions work there. It intentionally has no YouCam backend or key; scanning reports that the connection is unavailable. To enable real scans, deploy the Node server on a server-capable host and configure its secret. Do not put credentials in static files.
-
-## Privacy and scope
-
-Routine, photo previews and scan observations are held in browser memory. Saved text summaries use localStorage only when the user selects Save. Delete session clears that browser's app-held data and requests server memory deletion; provider-side deletion is not promised. The sample catalogue is fictional and incomplete, and verdicts are educational shopping support, not clinical or individual safety assessments. Scans do not establish product need or affect the purchase verdict.
-
-## Demo path
-
-1. Overview → My shelf: add Cloud Wash, Daily Dew and Daylight 50.
-2. Check a product → Quiet Cream → Check this product.
-3. Read Hold, the role/ingredient overlap, uncertainties and next steps.
-4. Save or download the text summary; inspect Saved decisions.
-5. Select Mystery Serum to demonstrate missing-data handling.
-6. Skin insights: inspect consent and the transparent unavailable-provider path.
-
-## Remaining hackathon work
-
-Complete a genuine consented YouCam sandbox scan; deploy a server-capable build; verify provider terms and retention; conduct diverse-image and user testing; capture screenshots and a 1–3 minute public demo; prepare submission access. GroupFit is not included because the supplied detailed specification covers ShelfCheck only.
-
-## Responsive compatibility
-
-The interface adapts from small phones to desktop: wrapping phone navigation, 44px primary touch controls, 16px form inputs, flexible grids, safe-area spacing, wrapping summaries, and scrollable dialogs/short desktop sidebars. Privacy and deletion controls remain available on mobile.
-
-Browser viewport QA passed at 320, 375, 768, 1024 and 1440 CSS pixels for Overview, My shelf, Comparison, Skin insights, and Saved decisions: no document horizontal overflow in 25 screen/width combinations. These are viewport checks in the in-app browser, not physical-device or cross-engine certification. Physical iOS/Android, Safari/Firefox/Chrome, camera uploads and real YouCam analysis still need testing.
-
-The reusable manual test fixture is `tests/responsive-qa.html`. Temporarily copy it into `dist/` and open `/responsive-qa.html` while the server runs, then remove the temporary copy. It embeds same-origin viewports and reports document overflow; it is not shipped with the application.
-
-## Read aloud
-
-On the decision screen, select **Read aloud** to hear the verdict, evidence, uncertainties, next steps and limitations. Playback is optional, with English voice selection, 0.8×/1×/1.2× speed, Pause/Resume and Stop. Navigation, hiding the tab or deleting the session stops narration. Changing voice or speed stops playback so the next explicit play uses your selection.
-
-Uses the browser Web Speech API; no API key or microphone permission is required. Voice availability and quality depend on the browser/device, and some system voices may require internet. Text remains visible and unsupported browsers show a fallback message. Browser playback start, pause and resume were verified; physical-device audio QA remains necessary.
-
-Reference: https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis
-
-## Repository
-
-Canonical source: https://github.com/ChisomAniefuna/Selfcheck
+- https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis

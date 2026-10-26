@@ -94,3 +94,7 @@ footer{flex-wrap:wrap;gap:10px;font-size:10px;padding-bottom:max(24px,env(safe-a
 #reader-status{font-size:12px;margin:16px 0 8px;color:#52654b}.reader-panel>small{display:block;font-size:11px;line-height:1.8;color:#66735e}
 @media(max-width:600px){.reader-panel{padding:20px}.reader-heading .primary{width:100%}.reader-actions{width:100%}.reader-actions button{flex:1}.reader-options label{flex-basis:100%}}
 @media print{.reader-panel{display:none}}
+.backend-status{padding:10px 43px;background:#eef2e7;border-bottom:1px solid var(--line);font-size:11px;line-height:1.7;color:#52654b}
+@media(max-width:800px){.backend-status{padding:10px 22px}}
+@media(max-width:600px){.backend-status{padding:10px 16px}}
+@media print{.backend-status{display:none}}
