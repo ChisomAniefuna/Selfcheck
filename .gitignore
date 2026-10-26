@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+node_modules/
+*.tar.gz
+.DS_Store
+# Site-specific hosting identity is managed separately from GitHub.
+.openai/
