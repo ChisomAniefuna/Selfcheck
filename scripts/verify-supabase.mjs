@@ -5,9 +5,10 @@ import {supabaseConfig as config} from '../dist/config.js';
 import {createBackend} from '../dist/backend.js';
 if(!process.argv.includes('--live'))throw Error('Run with --live to create temporary guests in the configured project.');
 const clients=[],backends=[];
+const origin=process.env.SHELFCHECK_ORIGIN||'http://localhost:4173';
 try{
  for(let i=0;i<2;i++){
-  const client=createClient(config.url,config.publishableKey,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Origin:'http://localhost:4173'}}});
+  const client=createClient(config.url,config.publishableKey,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Origin:origin}}});
   const {data,error}=await client.auth.signInAnonymously();if(error)throw Error('Guest sign-in failed: '+error.message);
   assert.ok(data.user?.is_anonymous);clients.push(client);
   backends.push(createBackend(config,async()=>({createClient:()=>client})));
@@ -25,9 +26,11 @@ try{
  assert.ok(forbidden.error);assert.ok(bUser);
  console.log('PASS: the second guest cannot read, delete or create data owned by the first.');
  const scan=await a.scanConfig();assert.equal(typeof scan.youcamConfigured,'boolean');
- console.log('PASS: authenticated Edge Function responds, with allowed-origin CORS.');
+ const preflight=await fetch(config.url+'/functions/v1/shelfcheck',{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'authorization,apikey,content-type'}});
+ assert.equal(preflight.status,204);assert.equal(preflight.headers.get('access-control-allow-origin'),origin);
+ console.log('PASS: authenticated Edge Function and CORS preflight accept '+origin+'.');
  console.log('YouCam connection: '+(scan.youcamConfigured?'configured (no scan performed)':'not configured; no photo sent.'));
- const denied=await fetch(config.url+'/functions/v1/shelfcheck',{method:'POST',headers:{apikey:config.publishableKey,'Content-Type':'application/json',Origin:'http://localhost:4173'},body:JSON.stringify({action:'config'})});
+ const denied=await fetch(config.url+'/functions/v1/shelfcheck',{method:'POST',headers:{apikey:config.publishableKey,'Content-Type':'application/json',Origin:origin},body:JSON.stringify({action:'config'})});
  assert.equal(denied.status,401);
  console.log('PASS: unauthenticated function requests are rejected.');
  await a.removeSaved(saved.id);assert.equal((await a.listSaved()).some(x=>x.id===saved.id),false);

@@ -2,6 +2,8 @@
 
 Skincare purchase comparisons with a responsive interface, 16 fictional sample products, transparent verdicts, optional read-aloud decisions and a Supabase backend.
 
+Production: https://shelfcheck-mu.vercel.app
+
 Repository: https://github.com/ChisomAniefuna/Selfcheck
 
 ## Run locally
@@ -44,7 +46,7 @@ Original photos and provider results are not stored in Supabase Storage or datab
    This applies both migrations, including the Cron extension/job. If your project's extension permissions differ, enable Supabase Cron in the dashboard first, then rerun the pending migration. Inspect migration success and the Cron job history.
 4. In **Edge Functions → Secrets**, set:
    - `YOUCAM_API_KEY`: your YouCam key; never expose it in browser config.
-   - `ALLOWED_ORIGINS`: exact comma-separated frontend origins, for example `http://localhost:4173,https://your-production-domain.example`. No wildcards or paths. If this secret is unset, the function permits only `http://localhost:4173` and `http://127.0.0.1:4173` for local testing.
+   - `ALLOWED_ORIGINS`: exact comma-separated frontend origins, for example `http://localhost:4173,https://your-production-domain.example`. No wildcards or paths. If this secret is unset, the function permits `http://localhost:4173`, `http://127.0.0.1:4173` and the exact production origin `https://shelfcheck-mu.vercel.app`.
    Supabase injects its own project URL and public/secret key dictionaries. The function uses the `default` entries, with legacy environment fallbacks.
 5. Deploy the function with JWT verification enabled:
 
@@ -123,3 +125,16 @@ npx vercel deploy --prod
 Or import `ChisomAniefuna/Selfcheck` in Vercel with framework **Other**, root directory **.**, build command **npm run build**, and output directory **dist**. The repository contains configuration for those build settings.
 
 After Vercel assigns the production origin, add that exact origin to the Supabase Edge Function's allowed origins before considering the deployment complete. Do not permit every `vercel.app` domain. Preview domains are not automatically trusted. Verify cloud saving and Edge Function requests from the production origin. Deployment does not configure the missing YouCam API key.
+
+### Verified production deployment
+
+- Team/project: `aniefuns-projects/shelfcheck`
+- Public production alias: https://shelfcheck-mu.vercel.app
+- Framework: static HTML/CSS/JavaScript; Node.js 22 builds the bundled Supabase client.
+- GitHub repository connected for subsequent deployments.
+- Browser verification: guest connection, comparison, cloud save and persistence after reload passed.
+- Live smoke test passed with `SHELFCHECK_ORIGIN=https://shelfcheck-mu.vercel.app node scripts/verify-supabase.mjs --live`, including CORS preflight, guest isolation and deletion of disposable test accounts.
+- Supabase Edge Function v2 includes the exact production origin; preview URLs are not broadly allowed.
+- Live YouCam analysis remains unavailable until its secret is configured and sandbox-tested.
+
+Vercel CLI 65.4.0 is installed globally and authenticated as `aniefun`. The user-scoped Vercel plugin is installed and enabled. The shared Codex MCP endpoint `https://mcp.vercel.com` is configured and OAuth login succeeded, with write-tool confirmation retained. Its tools were not yet loaded in the current chat; reopen/reload the agent to perform the guide's authenticated `list_teams` MCP check. This does not affect the verified CLI deployment.
